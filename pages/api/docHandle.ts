@@ -10,7 +10,7 @@ import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 
 import * as fs from "fs";
 import * as path from "path";
-const storeSaveDir = "tmp/vectorIndexs";
+const storeSaveDir = "/tmp/vectorIndexs";
 const vectorStoreFilesName = {
   args: "args.json",
   docstore: "docstore.json",
@@ -31,7 +31,7 @@ async function vectorStoreToBinary(store: StoreTypeHNSWLib) {
   // docstore.json
   // hnswlib.index --- binary
   // fix no such file or directory, mkdir 'tmp'
-  fs.mkdirSync(path.join(process.cwd(), storeSaveDir), { recursive: true });
+  fs.mkdirSync(storeSaveDir, { recursive: true });
   await store.save(storeSaveDir);
 }
 
