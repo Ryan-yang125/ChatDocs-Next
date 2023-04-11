@@ -1,124 +1,68 @@
-import Image from 'next/image'
-import { Inter } from 'next/font/google'
+const text =
+  "Skip to content Documentation Guides Search... ⌘ K Feedback Help Blog Login ← Back To Guides How can I use files in Serverless Functions on Vercel? You can import files to be used inside a Vercel Serverless Functions as follows: // api/hello.js import { readFileSync } from 'fs'; import path from 'path'; export default function handler(req, res) { const file = path.join(process.cwd(), 'files', 'test.json'); const stringified = readFileSync(file, 'utf8'); res.setHeader('Content-Type', 'application/json'); return res.end(stringified); } An example Serverless Function that reads from the filesystem. Next.js You can also read files from inside server-side Next.js data fetching methods like getStaticProps or with API Routes, both of which use Serverless Functions when deployed to Vercel: // pages/index.js import { readFileSync } from 'fs'; import path from 'path'; export function getStaticProps() { const file = path.join(process.cwd(), 'posts', 'test.json'); const data = readFileSync(file, 'utf8'); return { props: { data, }, }; } export default function Home({ data }) { return <code>{data}</code>; } A Next.js application that reads from the filesystem. Using temporary storage Sometimes, you may need to save a file temporarily before sending it for permanent storage to a third-party storage service like Amazon S3. For example, if you are generating a PDF from content that is provided on the client-side, you will first need to save the PDF data temporarily before you can upload it to your the third-party storage service. In this case, you can use the /tmp folder available with serverless functions. The example code below is for an api endpoint that you can call from the front-end. You pass the title and filename of the PDF file to be created as query parameters. It uses pdfkit to create the pdf file and write it to the tmp folder so that the PDF content is read from that location and passed to the parameters of the AWS S3 SDK. // api/savepdf.js const PDFDocument = require('pdfkit'); const fs = require('fs'); import aws from 'aws-sdk'; export default async function handler(req, res) { //Send the data for the pdf in the request as query params such as the title and filename const { query: { title, filename }, } = req; const doc = new PDFDocument(); //use the tmp serverless function folder to create the write stream for the pdf let writeStream = fs.createWriteStream(`/tmp/${filename}.pdf`); doc.pipe(writeStream); doc.text(title); doc.end(); writeStream.on('finish', function () { //once the doc stream is completed, read the file from the tmp folder const fileContent = fs.readFileSync(`/tmp/${filename}.pdf`); //create the params for the aws s3 bucket var params = { Key: `${filename}.pdf`, Body: fileContent, Bucket: 'your-s3-bucket-name', ContentType: 'application/pdf', }; //Your AWS key and secret pulled from environment variables const s3 = new aws.S3({ accessKeyId: process.env.YOUR_AWS_KEY, secretAccessKey: process.env.YOUR_AWS_SECRET, }); s3.putObject(params, function (err, response) { res.status(200).json({ response: `File ${filename} saved to S3` }); }); }); } API Endpoint using the tmp folder to generate and send a PDF file Couldn't find the guide you need? Frameworks Next.js Create React App Svelte Nuxt Gatsby Vue Angular More Frameworks Resources Documentation Experts Customers Guides Help API Reference OSS Command-Line Integrations Company Home Blog Changelog About Careers Pricing Enterprise Security Next.js Conf Partners Contact Us Legal Privacy Policy Terms of Service Trademark Policy Inactivity Policy DMCA Policy Support Terms DPA SLA Sub-processors Cookie Preferences Event Terms and Conditions Job Applicant Privacy Notice Copyright © 2023 Vercel Inc. All rights reserved. Status: All systems normal. Light ";
+import { db } from "@/utils";
+import { IDocMeta } from "@/types";
+import { useState } from "react";
 
-const inter = Inter({ subsets: ['latin'] })
+export default function Demo() {
+  const [fileName, setFileName] = useState("sampletext");
+  const [question, setQuestion] = useState("");
+  const [ans, setAns] = useState("");
 
-export default function Home() {
+  const handleDocs = async () => {
+    const response = await fetch("/api/docHandle", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
+    const model: IDocMeta["model"] = await response.json();
+    console.log("handleDocs-getModels: ", model);
+    const id = await db.docs.add({
+      fileName,
+      fileSourceData: text,
+      model,
+    });
+    console.log("handleDocs-setToDb", id);
+  };
+
+  const handleQuestion = async () => {
+    const response = await fetch("/api/questionHandle", {
+      method: "POST",
+      body: JSON.stringify({ question }),
+    });
+    const res = await response.json();
+    console.log(res);
+    setAns(JSON.stringify(res));
+  };
+
+  const initModel = async () => {
+    const friends = await db.docs
+      .where("fileName")
+      .equals("sampletext")
+      .toArray();
+    const friend = friends[friends.length - 1];
+    console.log("initModel-getFromDb", friend);
+    const response = await fetch("/api/initModel", {
+      method: "POST",
+      body: JSON.stringify({ ...friend }),
+    });
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">pages/index.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700/10 after:dark:from-sky-900 after:dark:via-[#0141ff]/40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`${inter.className} mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p
-            className={`${inter.className} m-0 max-w-[30ch] text-sm opacity-50`}
-          >
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`${inter.className} mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p
-            className={`${inter.className} m-0 max-w-[30ch] text-sm opacity-50`}
-          >
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`${inter.className} mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p
-            className={`${inter.className} m-0 max-w-[30ch] text-sm opacity-50`}
-          >
-            Discover and deploy boilerplate example Next.js&nbsp;projects.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`${inter.className} mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p
-            className={`${inter.className} m-0 max-w-[30ch] text-sm opacity-50`}
-          >
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+    <>
+      FileName
+      <input type="text" value={fileName} readOnly />
+      <button onClick={handleDocs}>add model!</button>
+      <br />
+      <button onClick={initModel}>initModel!</button>
+      Question
+      <input
+        type="text"
+        value={question}
+        onChange={(ev) => setQuestion(ev.target.value)}
+      />
+      <button onClick={handleQuestion}>ask me!</button>
+      Ans
+      <input type="text" value={ans} readOnly />
+    </>
+  );
 }
