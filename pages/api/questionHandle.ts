@@ -2,11 +2,11 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import {
   HNSWLib,
   type HNSWLib as StoreTypeHNSWLib,
-} from "langchain/vectorstores";
+} from "langchain/vectorstores/hnswlib";
 import { VectorDBQAChain } from "langchain/chains";
 import { OpenAI } from "langchain/llms";
 
-import { OpenAIEmbeddings } from "langchain/embeddings";
+import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 
 import { IDocMeta } from "@/types";
 import * as fs from "fs";

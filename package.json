@@ -17,6 +17,7 @@
     "dexie": "^3.2.3",
     "eslint": "8.38.0",
     "eslint-config-next": "13.3.0",
+    "fs-extra": "^11.1.1",
     "hnswlib-node": "^1.4.2",
     "langchain": "^0.0.52",
     "next": "13.3.0",
@@ -27,6 +28,7 @@
     "typescript": "5.0.4"
   },
   "devDependencies": {
+    "@types/fs-extra": "^11.0.1",
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-prettier": "^4.2.1",
     "prettier": "^2.8.7"
