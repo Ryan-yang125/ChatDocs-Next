@@ -31,7 +31,7 @@ async function vectorStoreToBinary(store: StoreTypeHNSWLib) {
   // docstore.json
   // hnswlib.index --- binary
   // fix no such file or directory, mkdir 'tmp'
-  fs.mkdirSync(storeSaveDir, { recursive: true });
+  fs.mkdirSync(path.join(process.cwd(), storeSaveDir), { recursive: true });
   await store.save(storeSaveDir);
 }
 
