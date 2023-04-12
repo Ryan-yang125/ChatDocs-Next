@@ -1,59 +1,27 @@
-// import {text} from '@/utils/texts'
+import fs from "fs-extra";
 import type { NextApiRequest, NextApiResponse } from "next";
 
-import {
-  HNSWLib,
-  type HNSWLib as StoreTypeHNSWLib,
-} from "langchain/vectorstores/hnswlib";
+import { HNSWLib } from "langchain/vectorstores/hnswlib";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 
-import * as fs from "fs";
-import * as path from "path";
-const storeSaveDir = "/tmp/vectorIndexs";
-const vectorStoreFilesName = {
-  args: "args.json",
-  docstore: "docstore.json",
-  hnswlib: "hnswlib.index",
-};
+import {
+  readHNSWLibModelFromLocal,
+  vectorStoreToHNSWLibModel,
+  storesDir,
+} from "@/utils";
 
 async function handleDocs(text: string) {
   const textSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
   const docs = await textSplitter.createDocuments([text]);
+  console.log(docs);
+
   const vectorStore = await HNSWLib.fromDocuments(docs, new OpenAIEmbeddings());
+  console.log(vectorStore);
+
   return vectorStore;
 }
 
-// any better method?
-async function vectorStoreToBinary(store: StoreTypeHNSWLib) {
-  // files saved to tmp dir:
-  // args.json
-  // docstore.json
-  // hnswlib.index --- binary
-  // fix no such file or directory, mkdir 'tmp'
-  fs.mkdirSync(storeSaveDir, { recursive: true });
-  await store.save(storeSaveDir);
-}
-
-function readVectorStore() {
-  console.log("read from " + storeSaveDir);
-  const hnswlibIndex = fs.readFileSync(
-    path.join(storeSaveDir, vectorStoreFilesName.hnswlib),
-    "hex",
-  );
-  const args = fs
-    .readFileSync(path.join(storeSaveDir, vectorStoreFilesName.args))
-    .toString();
-  const docstore = fs
-    .readFileSync(path.join(storeSaveDir, vectorStoreFilesName.docstore))
-    .toString();
-  // console.log(libBinData);
-  return {
-    hnswlibIndex,
-    args,
-    docstore,
-  };
-}
 export default async function hanlder(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -65,26 +33,22 @@ export default async function hanlder(
     return res.status(400).json({ message: "No question in the request" });
   }
 
-  // tmp
-  if (fs.existsSync(storeSaveDir)) {
-    console.log("read from " + storeSaveDir);
-    const data = readVectorStore();
+  // TODO: remove start
+  const exists = await fs.exists(storesDir);
+  console.log(exists);
+
+  if (exists) {
+    console.log("read from " + storesDir);
+    const model = await readHNSWLibModelFromLocal();
     return res.status(200).send({
-      ...data,
+      ...model,
     });
   }
-  //
-  try {
-    const vectorStore = await handleDocs(text);
-    await vectorStoreToBinary(vectorStore);
-    console.log(vectorStore._index);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send({ message: "error on handleDocs" + error });
-  }
-  const data = readVectorStore();
+  // TODO: remove end
+  const vectorStore = await handleDocs(text);
+  const model = await vectorStoreToHNSWLibModel(vectorStore);
   res.status(200).send({
-    ...data,
+    ...model,
   });
 }
 

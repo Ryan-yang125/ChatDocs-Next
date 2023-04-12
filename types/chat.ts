@@ -18,3 +18,12 @@ export const OpenAIModels: Record<OpenAIModelID, OpenAIModel> = {
     name: "GPT-4",
   },
 };
+
+import { Document } from "langchain/document";
+
+export type Message = {
+  type: "apiMessage" | "userMessage";
+  message: string;
+  isStreaming?: boolean;
+  sourceDocs?: Document[];
+};

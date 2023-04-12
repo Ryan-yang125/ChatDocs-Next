@@ -19,7 +19,7 @@ type HNSWLibModel = {
 
 const HNSWLibModelFilesName = {
   args: "args.json",
-  docsStore: "docstore.json",
+  docstore: "docstore.json",
   hnswlibIndex: "hnswlib.index",
 };
 
@@ -28,30 +28,40 @@ export async function HNSWLibModelToVectorStore(
   model: HNSWLibModel,
   embeddings: OpenAIEmbeddings,
 ) {
-  // save model to /tmp/
-  await Promise.all(
-    Object.keys(HNSWLibModelFilesName).map((key) =>
-      fs.outputFile(
-        path.join(
-          storesDir,
-          (HNSWLibModelFilesName as Record<string, string>)[key],
-        ),
-        (model as Record<string, string>)[key],
-      ),
-    ),
-  );
+  await saveHNSWLibModelToLocal(model);
   // load from dir
   const vectorStore = await HNSWLib.load(storesDir, embeddings);
   return vectorStore;
+}
+
+export async function saveHNSWLibModelToLocal(model: HNSWLibModel) {
+  // save model to /tmp/
+  await Promise.all(
+    Object.keys(HNSWLibModelFilesName).map((key) => {
+      const fullPath = path.join(
+        storesDir,
+        (HNSWLibModelFilesName as Record<string, string>)[key],
+      );
+      console.log(fullPath);
+      const data = (model as Record<string, string>)[key];
+      console.log(data);
+
+      return fs.writeFile(fullPath, data);
+    }),
+  );
 }
 
 export async function vectorStoreToHNSWLibModel(
   store: StoreTypeHNSWLib,
 ): Promise<HNSWLibModel> {
   await store.save(storesDir);
+  return await readHNSWLibModelFromLocal();
+}
+
+export async function readHNSWLibModelFromLocal(): Promise<HNSWLibModel> {
   const [args, docstore, hnswlibIndex] = await Promise.all([
     fs.readFile(path.join(storesDir, HNSWLibModelFilesName.args), "utf-8"),
-    fs.readFile(path.join(storesDir, HNSWLibModelFilesName.docsStore), "utf-8"),
+    fs.readFile(path.join(storesDir, HNSWLibModelFilesName.docstore), "utf-8"),
     fs.readFile(
       path.join(storesDir, HNSWLibModelFilesName.hnswlibIndex),
       "hex",
