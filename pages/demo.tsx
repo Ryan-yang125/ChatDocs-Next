@@ -1,327 +1,68 @@
-import { useRef, useState, useEffect, useMemo, useCallback } from "react";
-import Layout from "@/components/layout";
-import styles from "@/styles/Home.module.css";
-import { Message } from "@/types/chat";
-import { fetchEventSource } from "@microsoft/fetch-event-source";
-import Image from "next/image";
-import ReactMarkdown from "react-markdown";
-import LoadingDots from "@/components/ui/LoadingDots";
-import { Document } from "langchain/document";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+const text =
+  "Skip to content Documentation Guides Search... ⌘ K Feedback Help Blog Login ← Back To Guides How can I use files in Serverless Functions on Vercel? You can import files to be used inside a Vercel Serverless Functions as follows: // api/hello.js import { readFileSync } from 'fs'; import path from 'path'; export default function handler(req, res) { const file = path.join(process.cwd(), 'files', 'test.json'); const stringified = readFileSync(file, 'utf8'); res.setHeader('Content-Type', 'application/json'); return res.end(stringified); } An example Serverless Function that reads from the filesystem. Next.js You can also read files from inside server-side Next.js data fetching methods like getStaticProps or with API Routes, both of which use Serverless Functions when deployed to Vercel: // pages/index.js import { readFileSync } from 'fs'; import path from 'path'; export function getStaticProps() { const file = path.join(process.cwd(), 'posts', 'test.json'); const data = readFileSync(file, 'utf8'); return { props: { data, }, }; } export default function Home({ data }) { return <code>{data}</code>; } A Next.js application that reads from the filesystem. Using temporary storage Sometimes, you may need to save a file temporarily before sending it for permanent storage to a third-party storage service like Amazon S3. For example, if you are generating a PDF from content that is provided on the client-side, you will first need to save the PDF data temporarily before you can upload it to your the third-party storage service. In this case, you can use the /tmp folder available with serverless functions. The example code below is for an api endpoint that you can call from the front-end. You pass the title and filename of the PDF file to be created as query parameters. It uses pdfkit to create the pdf file and write it to the tmp folder so that the PDF content is read from that location and passed to the parameters of the AWS S3 SDK. // api/savepdf.js const PDFDocument = require('pdfkit'); const fs = require('fs'); import aws from 'aws-sdk'; export default async function handler(req, res) { //Send the data for the pdf in the request as query params such as the title and filename const { query: { title, filename }, } = req; const doc = new PDFDocument(); //use the tmp serverless function folder to create the write stream for the pdf let writeStream = fs.createWriteStream(`/tmp/${filename}.pdf`); doc.pipe(writeStream); doc.text(title); doc.end(); writeStream.on('finish', function () { //once the doc stream is completed, read the file from the tmp folder const fileContent = fs.readFileSync(`/tmp/${filename}.pdf`); //create the params for the aws s3 bucket var params = { Key: `${filename}.pdf`, Body: fileContent, Bucket: 'your-s3-bucket-name', ContentType: 'application/pdf', }; //Your AWS key and secret pulled from environment variables const s3 = new aws.S3({ accessKeyId: process.env.YOUR_AWS_KEY, secretAccessKey: process.env.YOUR_AWS_SECRET, }); s3.putObject(params, function (err, response) { res.status(200).json({ response: `File ${filename} saved to S3` }); }); }); } API Endpoint using the tmp folder to generate and send a PDF file Couldn't find the guide you need? Frameworks Next.js Create React App Svelte Nuxt Gatsby Vue Angular More Frameworks Resources Documentation Experts Customers Guides Help API Reference OSS Command-Line Integrations Company Home Blog Changelog About Careers Pricing Enterprise Security Next.js Conf Partners Contact Us Legal Privacy Policy Terms of Service Trademark Policy Inactivity Policy DMCA Policy Support Terms DPA SLA Sub-processors Cookie Preferences Event Terms and Conditions Job Applicant Privacy Notice Copyright © 2023 Vercel Inc. All rights reserved. Status: All systems normal. Light ";
+import { db } from "@/utils/db-client";
+import { IDocMeta } from "@/types";
+import { useState } from "react";
 
-export default function ChatBox() {
-  const [query, setQuery] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [sourceDocs, setSourceDocs] = useState<Document[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [messageState, setMessageState] = useState<{
-    messages: Message[];
-    pending?: string;
-    history: [string, string][];
-    pendingSourceDocs?: Document[];
-  }>({
-    messages: [
-      {
-        message: "Hi, what would you like to learn about this doc",
-        type: "apiMessage",
-      },
-    ],
-    history: [],
-    pendingSourceDocs: [],
-  });
+export default function Demo() {
+  const [fileName, setFileName] = useState("sampletext");
+  const [question, setQuestion] = useState("");
+  const [ans, setAns] = useState("");
 
-  const { messages, pending, history, pendingSourceDocs } = messageState;
+  const handleDocs = async () => {
+    const response = await fetch("/api/docHandle", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
+    const model: IDocMeta["model"] = await response.json();
+    console.log("handleDocs-getModels: ", model);
+    const id = await db.docs.add({
+      fileName,
+      fileSourceData: text,
+      model,
+    });
+    console.log("handleDocs-setToDb", id);
+  };
 
-  const messageListRef = useRef<HTMLDivElement>(null);
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const handleQuestion = async () => {
+    const response = await fetch("/api/questionHandle", {
+      method: "POST",
+      body: JSON.stringify({ question }),
+    });
+    const res = await response.json();
+    console.log(res);
+    setAns(JSON.stringify(res));
+  };
 
-  useEffect(() => {
-    textAreaRef.current?.focus();
-  }, []);
-
-  //handle form submission
-  async function handleSubmit(e: any) {
-    e.preventDefault();
-
-    setError(null);
-
-    if (!query) {
-      alert("Please input a question");
-      return;
-    }
-
-    const question = query.trim();
-
-    setMessageState((state) => ({
-      ...state,
-      messages: [
-        ...state.messages,
-        {
-          type: "userMessage",
-          message: question,
-        },
-      ],
-      pending: undefined,
-    }));
-
-    setLoading(true);
-    setQuery("");
-    setMessageState((state) => ({ ...state, pending: "" }));
-
-    const ctrl = new AbortController();
-
-    try {
-      fetchEventSource("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          question,
-          history,
-        }),
-        signal: ctrl.signal,
-        onmessage: (event) => {
-          if (event.data === "[DONE]") {
-            setMessageState((state) => ({
-              history: [...state.history, [question, state.pending ?? ""]],
-              messages: [
-                ...state.messages,
-                {
-                  type: "apiMessage",
-                  message: state.pending ?? "",
-                  sourceDocs: state.pendingSourceDocs,
-                },
-              ],
-              pending: undefined,
-              pendingSourceDocs: undefined,
-            }));
-            setLoading(false);
-            ctrl.abort();
-          } else {
-            const data = JSON.parse(event.data);
-            if (data.sourceDocs) {
-              setMessageState((state) => ({
-                ...state,
-                pendingSourceDocs: data.sourceDocs,
-              }));
-            } else {
-              setMessageState((state) => ({
-                ...state,
-                pending: (state.pending ?? "") + data.data,
-              }));
-            }
-          }
-        },
-      });
-    } catch (error) {
-      setLoading(false);
-      setError("An error occurred while fetching the data. Please try again.");
-      console.log("error", error);
-    }
-  }
-
-  //prevent empty submissions
-  const handleEnter = useCallback(
-    (e: any) => {
-      if (e.key === "Enter" && query) {
-        handleSubmit(e);
-      } else if (e.key == "Enter") {
-        e.preventDefault();
-      }
-    },
-    [query],
-  );
-
-  const chatMessages = useMemo(() => {
-    return [
-      ...messages,
-      ...(pending
-        ? [
-            {
-              type: "apiMessage",
-              message: pending,
-              sourceDocs: pendingSourceDocs,
-            },
-          ]
-        : []),
-    ];
-  }, [messages, pending, pendingSourceDocs]);
-
-  //scroll to bottom of chat
-  useEffect(() => {
-    if (messageListRef.current) {
-      messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
-    }
-  }, [chatMessages]);
+  const initModel = async () => {
+    const friends = await db.docs
+      .where("fileName")
+      .equals("sampletext")
+      .toArray();
+    const friend = friends[friends.length - 1];
+    console.log("initModel-getFromDb", friend);
+    const response = await fetch("/api/initModel", {
+      method: "POST",
+      body: JSON.stringify({ ...friend }),
+    });
+  };
 
   return (
     <>
-      <Layout>
-        <div className="mx-auto flex flex-col gap-4">
-          <h1 className="text-2xl font-bold leading-[1.1] tracking-tighter text-center">
-            Chat With Your Docs
-          </h1>
-          <main className={styles.main}>
-            <div className={styles.cloud}>
-              <div ref={messageListRef} className={styles.messagelist}>
-                {chatMessages.map((message, index) => {
-                  let icon;
-                  let className;
-                  if (message.type === "apiMessage") {
-                    icon = (
-                      <Image
-                        src="/bot-image.png"
-                        alt="AI"
-                        width="40"
-                        height="40"
-                        className={styles.boticon}
-                        priority
-                      />
-                    );
-                    className = styles.apimessage;
-                  } else {
-                    icon = (
-                      <Image
-                        src="/usericon.png"
-                        alt="Me"
-                        width="30"
-                        height="30"
-                        className={styles.usericon}
-                        priority
-                      />
-                    );
-                    // The latest message sent by the user will be animated while waiting for a response
-                    className =
-                      loading && index === chatMessages.length - 1
-                        ? styles.usermessagewaiting
-                        : styles.usermessage;
-                  }
-                  return (
-                    <>
-                      <div key={`chatMessage-${index}`} className={className}>
-                        {icon}
-                        <div className={styles.markdownanswer}>
-                          <ReactMarkdown linkTarget="_blank">
-                            {message.message}
-                          </ReactMarkdown>
-                        </div>
-                      </div>
-                      {message.sourceDocs && (
-                        <div
-                          className="p-5"
-                          key={`sourceDocsAccordion-${index}`}
-                        >
-                          <Accordion
-                            type="single"
-                            collapsible
-                            className="flex-col"
-                          >
-                            {message.sourceDocs.map((doc, index) => (
-                              <div key={`messageSourceDocs-${index}`}>
-                                <AccordionItem value={`item-${index}`}>
-                                  <AccordionTrigger>
-                                    <h3>Source {index + 1}</h3>
-                                  </AccordionTrigger>
-                                  <AccordionContent>
-                                    <ReactMarkdown linkTarget="_blank">
-                                      {doc.pageContent}
-                                    </ReactMarkdown>
-                                    <p className="mt-2">
-                                      <b>Source:</b> {doc.metadata.source}
-                                    </p>
-                                  </AccordionContent>
-                                </AccordionItem>
-                              </div>
-                            ))}
-                          </Accordion>
-                        </div>
-                      )}
-                    </>
-                  );
-                })}
-                {sourceDocs.length > 0 && (
-                  <div className="p-5">
-                    <Accordion type="single" collapsible className="flex-col">
-                      {sourceDocs.map((doc, index) => (
-                        <div key={`SourceDocs-${index}`}>
-                          <AccordionItem value={`item-${index}`}>
-                            <AccordionTrigger>
-                              <h3>Source {index + 1}</h3>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <ReactMarkdown linkTarget="_blank">
-                                {doc.pageContent}
-                              </ReactMarkdown>
-                            </AccordionContent>
-                          </AccordionItem>
-                        </div>
-                      ))}
-                    </Accordion>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className={styles.center}>
-              <div className={styles.cloudform}>
-                <form onSubmit={handleSubmit}>
-                  <textarea
-                    disabled={loading}
-                    onKeyDown={handleEnter}
-                    ref={textAreaRef}
-                    autoFocus={false}
-                    rows={1}
-                    maxLength={512}
-                    id="userInput"
-                    name="userInput"
-                    placeholder={
-                      loading
-                        ? "Waiting for response..."
-                        : "What is this case about?"
-                    }
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    className={styles.textarea}
-                  />
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className={styles.generatebutton}
-                  >
-                    {loading ? (
-                      <div className={styles.loadingwheel}>
-                        <LoadingDots color="#000" />
-                      </div>
-                    ) : (
-                      // Send icon SVG in input field
-                      <svg
-                        viewBox="0 0 20 20"
-                        className={styles.svgicon}
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
-                      </svg>
-                    )}
-                  </button>
-                </form>
-              </div>
-            </div>
-            {error && (
-              <div className="border border-red-400 rounded-md p-4">
-                <p className="text-red-500">{error}</p>
-              </div>
-            )}
-          </main>
-        </div>
-        <footer className="m-auto p-4">
-          <a href="https://twitter.com/mayowaoshin">Powered by LangChainAI.</a>
-        </footer>
-      </Layout>
+      FileName
+      <input type="text" value={fileName} readOnly />
+      <button onClick={handleDocs}>add model!</button>
+      <br />
+      <button onClick={initModel}>initModel!</button>
+      Question
+      <input
+        type="text"
+        value={question}
+        onChange={(ev) => setQuestion(ev.target.value)}
+      />
+      <button onClick={handleQuestion}>ask me!</button>
+      Ans
+      <input type="text" value={ans} readOnly />
     </>
   );
 }
