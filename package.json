@@ -1,6 +1,7 @@
 {
   "name": "chatdocs-next",
   "version": "0.1.0",
+  "description": "a more powerful ChatDocs, running without servers but only OpenAPI key, chat with your own docs,pdfs,txts,epub or even web pages and githubs repso, saftely, privately, and no limit.",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -38,5 +39,24 @@
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-prettier": "^4.2.1",
     "prettier": "^2.8.7"
-  }
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "homepage": "https://github.com/Ryan-yang125/ChatDocs-Next",
+  "license": "MIT",
+  "author": "RyanYang",
+  "repository": "https://github.com/Ryan-yang125/ChatDocs-Next",
+  "keywords": [
+    "gpt",
+    "chatgpt",
+    "openai",
+    "langchain",
+    "typescript",
+    "nextjs",
+    "vercel",
+    "docs",
+    "pdf",
+    "indexedDB"
+  ]
 }
