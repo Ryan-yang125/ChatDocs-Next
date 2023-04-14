@@ -1,57 +1,75 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import { OpenAIEmbeddings } from "langchain/embeddings/openai";
-import { makeChain } from "@/utils";
-import { HNSWLib } from "langchain/vectorstores/hnswlib";
-import { storesDir } from "@/utils/file-handler";
+import { DEFAULT_SYSTEM_PROMPT, DEFAULT_TEMPERATURE } from '@/utils/app/const';
+import { OpenAIError, OpenAIStream } from '@/utils/server';
 
-let vectorStore: HNSWLib;
+import { ChatBody, Message } from '@/types/chat';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
-  const { question, history } = req.body;
+// @ts-expect-error
+import wasm from '../../node_modules/@dqbd/tiktoken/lite/tiktoken_bg.wasm?module';
 
-  if (!question) {
-    return res.status(400).json({ message: "No question in the request" });
-  }
-  // OpenAI recommends replacing newlines with spaces for best results
-  const sanitizedQuestion = question.trim().replaceAll("\n", " ");
+import tiktokenModel from '@dqbd/tiktoken/encoders/cl100k_base.json';
+import { Tiktoken, init } from '@dqbd/tiktoken/lite/init';
 
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache, no-transform",
-    Connection: "keep-alive",
-  });
+export const config = {
+  runtime: 'edge',
+};
 
-  const sendData = (data: string) => {
-    res.write(`data: ${data}\n\n`);
-  };
-
-  sendData(JSON.stringify({ data: "" }));
-
-  // load store
-  if (!vectorStore) {
-    vectorStore = await HNSWLib.load(storesDir, new OpenAIEmbeddings());
-  }
-  //create chain
-  const chain = makeChain(vectorStore, (token: string) => {
-    sendData(JSON.stringify({ data: token }));
-  });
-
+const handler = async (req: Request): Promise<Response> => {
   try {
-    //Ask a question
-    const response = await chain.call({
-      question: sanitizedQuestion,
-      chat_history: history || [],
-    });
+    const { model, messages, key, prompt, temperature } =
+      (await req.json()) as ChatBody;
 
-    console.log("response", response);
-    sendData(JSON.stringify({ sourceDocs: response.sourceDocuments }));
+    await init((imports) => WebAssembly.instantiate(wasm, imports));
+    const encoding = new Tiktoken(
+      tiktokenModel.bpe_ranks,
+      tiktokenModel.special_tokens,
+      tiktokenModel.pat_str,
+    );
+
+    let promptToSend = prompt;
+    if (!promptToSend) {
+      promptToSend = DEFAULT_SYSTEM_PROMPT;
+    }
+
+    let temperatureToUse = temperature;
+    if (temperatureToUse == null) {
+      temperatureToUse = DEFAULT_TEMPERATURE;
+    }
+
+    const prompt_tokens = encoding.encode(promptToSend);
+
+    let tokenCount = prompt_tokens.length;
+    let messagesToSend: Message[] = [];
+
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      const tokens = encoding.encode(message.content);
+
+      if (tokenCount + tokens.length + 1000 > model.tokenLimit) {
+        break;
+      }
+      tokenCount += tokens.length;
+      messagesToSend = [message, ...messagesToSend];
+    }
+
+    encoding.free();
+
+    const stream = await OpenAIStream(
+      model,
+      promptToSend,
+      temperatureToUse,
+      key,
+      messagesToSend,
+    );
+
+    return new Response(stream);
   } catch (error) {
-    console.log("error", error);
-  } finally {
-    sendData("[DONE]");
-    res.end();
+    console.error(error);
+    if (error instanceof OpenAIError) {
+      return new Response('Error', { status: 500, statusText: error.message });
+    } else {
+      return new Response('Error', { status: 500 });
+    }
   }
-}
+};
+
+export default handler;

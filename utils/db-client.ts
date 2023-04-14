@@ -1,13 +1,13 @@
-import Dexie, { Table } from "dexie";
-import { IDocMeta } from "@/types";
+import { IDocMeta } from '@/types';
+import Dexie, { Table } from 'dexie';
 
 export class MyDocDb extends Dexie {
   docs!: Table<IDocMeta>;
 
   constructor() {
-    super("myDocDb");
+    super('myDocDb');
     this.version(1).stores({
-      docs: "++id, folderName, fileName, fileSourceData, model",
+      docs: '++id, folderName, fileName, fileSourceData, model',
     });
   }
 }

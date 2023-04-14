@@ -1,9 +1,9 @@
-import { OpenAIChat } from "langchain/llms";
-import { LLMChain, ChatVectorDBQAChain, loadQAChain } from "langchain/chains";
-import { HNSWLib } from "langchain/vectorstores/hnswlib";
-import { PromptTemplate } from "langchain/prompts";
-import { CallbackManager } from "langchain/callbacks";
-import { OpenAIModelID } from "@/types";
+import { OpenAIModelID } from '@/types';
+import { CallbackManager } from 'langchain/callbacks';
+import { ChatVectorDBQAChain, LLMChain, loadQAChain } from 'langchain/chains';
+import { OpenAIChat } from 'langchain/llms';
+import { PromptTemplate } from 'langchain/prompts';
+import { HNSWLib } from 'langchain/vectorstores/hnswlib';
 
 export const defaultPrompts = {
   CONDENSE_PROMPT: `Given the following conversation and a follow up question, rephrase the follow up question to be a standalone question.

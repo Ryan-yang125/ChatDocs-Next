@@ -1,15 +1,15 @@
+import fs from 'fs-extra';
+import type { OpenAIEmbeddings } from 'langchain/embeddings/openai';
 import {
   HNSWLib,
   type HNSWLib as StoreTypeHNSWLib,
-} from "langchain/vectorstores/hnswlib";
-import type { OpenAIEmbeddings } from "langchain/embeddings/openai";
-import path from "path";
-import fs from "fs-extra";
+} from 'langchain/vectorstores/hnswlib';
+import path from 'path';
 
-const ifDev = process.env.NODE_ENV === "development";
+const ifDev = process.env.NODE_ENV === 'development';
 // in prod mode, only allowed to write to /tmp/
 // https://vercel.com/guides/how-can-i-use-files-in-serverless-functions
-export const storesDir = ifDev ? "tmp/hnswlib-stores" : "/tmp/hnswlib-stores";
+export const storesDir = ifDev ? 'tmp/hnswlib-stores' : '/tmp/hnswlib-stores';
 
 type HNSWLibModel = {
   args: string;
@@ -18,9 +18,9 @@ type HNSWLibModel = {
 };
 
 const HNSWLibModelFilesName = {
-  args: "args.json",
-  docstore: "docstore.json",
-  hnswlibIndex: "hnswlib.index",
+  args: 'args.json',
+  docstore: 'docstore.json',
+  hnswlibIndex: 'hnswlib.index',
 };
 
 // looking forward to a better way to transfrom hnswlibStore <=> indexes
@@ -60,11 +60,11 @@ export async function vectorStoreToHNSWLibModel(
 
 export async function readHNSWLibModelFromLocal(): Promise<HNSWLibModel> {
   const [args, docstore, hnswlibIndex] = await Promise.all([
-    fs.readFile(path.join(storesDir, HNSWLibModelFilesName.args), "utf-8"),
-    fs.readFile(path.join(storesDir, HNSWLibModelFilesName.docstore), "utf-8"),
+    fs.readFile(path.join(storesDir, HNSWLibModelFilesName.args), 'utf-8'),
+    fs.readFile(path.join(storesDir, HNSWLibModelFilesName.docstore), 'utf-8'),
     fs.readFile(
       path.join(storesDir, HNSWLibModelFilesName.hnswlibIndex),
-      "hex",
+      'hex',
     ),
   ]);
   return {

@@ -1,15 +1,14 @@
-import fs from "fs-extra";
-import type { NextApiRequest, NextApiResponse } from "next";
-
-import { HNSWLib } from "langchain/vectorstores/hnswlib";
-import { OpenAIEmbeddings } from "langchain/embeddings/openai";
-import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+import type { NextApiRequest, NextApiResponse } from 'next';
 
 import {
   readHNSWLibModelFromLocal,
-  vectorStoreToHNSWLibModel,
   storesDir,
-} from "@/utils";
+  vectorStoreToHNSWLibModel,
+} from '@/utils';
+import fs from 'fs-extra';
+import { OpenAIEmbeddings } from 'langchain/embeddings/openai';
+import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
+import { HNSWLib } from 'langchain/vectorstores/hnswlib';
 
 async function handleDocs(text: string) {
   const textSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000 });
@@ -30,7 +29,7 @@ export default async function hanlder(
   // console.log(text);
 
   if (!text) {
-    return res.status(400).json({ message: "No question in the request" });
+    return res.status(400).json({ message: 'No question in the request' });
   }
 
   // TODO: remove start
@@ -38,7 +37,7 @@ export default async function hanlder(
   console.log(exists);
 
   if (exists) {
-    console.log("read from " + storesDir);
+    console.log('read from ' + storesDir);
     const model = await readHNSWLibModelFromLocal();
     return res.status(200).send({
       ...model,
