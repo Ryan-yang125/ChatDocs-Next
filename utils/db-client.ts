@@ -1,8 +1,8 @@
-import { IDocMeta } from '@/types';
+// import { IDocMeta } from '@/types';
 import Dexie, { Table } from 'dexie';
 
 export class MyDocDb extends Dexie {
-  docs!: Table<IDocMeta>;
+  docs!: Table<any>;
 
   constructor() {
     super('myDocDb');

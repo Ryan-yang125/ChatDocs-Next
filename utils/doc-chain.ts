@@ -1,4 +1,4 @@
-import { OpenAIModelID } from '@/types';
+import { OpenAIModelID } from '@/types/openai';
 import { CallbackManager } from 'langchain/callbacks';
 import { ChatVectorDBQAChain, LLMChain, loadQAChain } from 'langchain/chains';
 import { OpenAIChat } from 'langchain/llms';
