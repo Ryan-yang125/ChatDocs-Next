@@ -1,7 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-
-import { IDocMeta } from '@/types';
-import * as fs from 'fs';
 import { VectorDBQAChain } from 'langchain/chains';
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai';
 import { OpenAI } from 'langchain/llms';
@@ -9,22 +6,9 @@ import {
   HNSWLib,
   type HNSWLib as StoreTypeHNSWLib,
 } from 'langchain/vectorstores/hnswlib';
-import * as path from 'path';
-
 let vecStore: StoreTypeHNSWLib;
 
-const model: IDocMeta['model'] = {
-  args: '',
-  hnswlibIndex: '',
-  docstore: '',
-};
-
 const storeSaveDir = 'tmp/vectorIndexs';
-const vectorStoreFilesName = {
-  args: 'args.json',
-  docstore: 'docstore.json',
-  hnswlib: 'hnswlib.index',
-};
 
 async function loadModel() {
   vecStore = await HNSWLib.load(storeSaveDir, new OpenAIEmbeddings());
