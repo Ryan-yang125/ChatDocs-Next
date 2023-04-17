@@ -355,7 +355,7 @@ const Home = ({
       }}
     >
       <Head>
-        <title>Chatbot UI</title>
+        <title>ChatDocs Next</title>
         <meta name="description" content="ChatGPT but better." />
         <meta
           name="viewport"
@@ -399,18 +399,10 @@ export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
 
   let serverSidePluginKeysSet = false;
 
-  const googleApiKey = process.env.GOOGLE_API_KEY;
-  const googleCSEId = process.env.GOOGLE_CSE_ID;
-
-  if (googleApiKey && googleCSEId) {
-    serverSidePluginKeysSet = true;
-  }
-
   return {
     props: {
       serverSideApiKeyIsSet: !!process.env.OPENAI_API_KEY,
       defaultModelId,
-      serverSidePluginKeysSet,
       ...(await serverSideTranslations(locale ?? 'en', [
         'common',
         'chat',
