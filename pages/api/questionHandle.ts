@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+
 import { VectorDBQAChain } from 'langchain/chains';
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai';
 import { OpenAI } from 'langchain/llms';
@@ -6,6 +7,7 @@ import {
   HNSWLib,
   type HNSWLib as StoreTypeHNSWLib,
 } from 'langchain/vectorstores/hnswlib';
+
 let vecStore: StoreTypeHNSWLib;
 
 const storeSaveDir = 'tmp/vectorIndexs';

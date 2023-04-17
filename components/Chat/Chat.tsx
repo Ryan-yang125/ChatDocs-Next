@@ -26,6 +26,7 @@ import { Plugin } from '@/types/plugin';
 import HomeContext from '@/pages/api/home/home.context';
 
 import Spinner from '../Spinner';
+import { FileUploader } from '../Upload/FileUploader';
 import { ChatInput } from './ChatInput';
 import { ChatLoader } from './ChatLoader';
 import { ChatMessage } from './ChatMessage';
@@ -432,6 +433,12 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
                             value: temperature,
                           })
                         }
+                      />
+
+                      <FileUploader
+                        onUpload={(files: File[]) => {
+                          console.log(files);
+                        }}
                       />
                     </div>
                   )}
