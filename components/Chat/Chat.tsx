@@ -26,11 +26,11 @@ import { Plugin } from '@/types/plugin';
 import HomeContext from '@/pages/api/home/home.context';
 
 import Spinner from '../Spinner';
-import { FileUploader } from '../Upload/FileUploader';
 import { ChatInput } from './ChatInput';
 import { ChatLoader } from './ChatLoader';
 import { ChatMessage } from './ChatMessage';
 import { ErrorMessageDiv } from './ErrorMessageDiv';
+import { FileLoader } from './FileLoader';
 import { ModelSelect } from './ModelSelect';
 
 interface Props {
@@ -401,11 +401,7 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
                   {models.length > 0 && (
                     <div className="flex h-full flex-col space-y-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-600">
                       <ModelSelect />
-                      <FileUploader
-                        onUpload={(files: File[]) => {
-                          console.log(files);
-                        }}
-                      />
+                      <FileLoader />
                     </div>
                   )}
                 </div>
