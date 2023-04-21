@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import { MouseEventHandler, ReactElement } from 'react';
 
 import { useTranslation } from 'next-i18next';
@@ -11,7 +11,9 @@ import { FileUploader } from '../Upload/FileUploader';
 export const FileLoader = () => {
   const { t } = useTranslation('chat');
 
+  const [files, setFiles] = useState<File[]>()
   const handleUpload = (files: File[]) => {
+    setFiles(files)
     console.log(files);
   };
 
